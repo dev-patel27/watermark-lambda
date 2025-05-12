@@ -15,11 +15,11 @@ rm -f $DEPLOY_PACKAGE
 # Create necessary directories
 echo "Setting up directories..."
 mkdir -p $LAMBDA_DIR
-# mkdir -p $FONT_DIR
+mkdir -p $FONT_DIR
 
 # # Copy the font file into the Lambda directory
-# echo "Copying font file..."
-# cp $FONT_FILE $FONT_DIR/
+echo "Copying font file..."
+cp $FONT_FILE $FONT_DIR/
 
 # Compile Go code (Linux binary)
 echo "Compiling Go code for AWS Lambda (GOOS=linux GOARCH=amd64)..."

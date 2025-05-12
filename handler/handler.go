@@ -7,7 +7,7 @@ import (
 	"lambda-watermark/s3utils"
 	"lambda-watermark/utils"
 	"log"
-	"os"
+	"net/url"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -17,45 +17,38 @@ import (
 )
 
 func Watermark(inputFile, outputFile string, timestamp time.Time) error {
-	timestampStr := timestamp.Format("02/01/2006 15\\:04\\:05")
+	watermarkPath := "/tmp/timestamp.png"
+
+	// Generate watermark image
+	if err := utils.GenerateTimestampImage(timestamp, watermarkPath); err != nil {
+		return fmt.Errorf("generate watermark error: %w", err)
+	}
 
 	args := []string{
+		"-y", // overwrite output file if exists
 		"-i", inputFile,
-		"-vf", fmt.Sprintf("drawtext=fontfile=/opt/fonts/DejaVuSans-Bold.ttf:text='%s':x=w-text_w-30:y=h-text_h-30:fontsize=30:fontcolor=#c617bb", timestampStr),
-		"-c:a", "copy",
+		"-i", watermarkPath,
+		"-filter_complex", "overlay=W-w-30:H-h-10", // position at bottom-right
+		"-c:v", "libx264", // encode video using fast x264
+		"-preset", "ultrafast", // fastest encoding preset
+		"-tune", "zerolatency", // reduce latency and processing time
+		"-movflags", "+faststart", // better streaming performance
+		"-f", "mp4", // explicit output format
 		outputFile,
 	}
 
-	// logs
-	cmd1 := exec.Command("ls", "-l", "/opt/bin/ffmpeg")
-	var out1 bytes.Buffer
-	cmd1.Stdout = &out1
-	cmd1.Stderr = &out1
-
-	err1 := cmd1.Run()
-	if err1 != nil {
-		log.Printf("Error listing ffmpeg permissions: %s", out1.String())
-	} else {
-		log.Printf("Permissions of ffmpeg: %s", out1.String())
-	}
-
-	if _, err2 := os.Stat("/opt/bin/ffmpeg"); os.IsNotExist(err2) {
-		log.Println("FFmpeg is not found at /opt/bin/ffmpeg")
-	} else {
-		log.Println("FFmpeg found at /opt/bin/ffmpeg")
-	}
-	// log end
-	log.Println("Adding new test log")
 	cmd := exec.Command("/opt/bin/ffmpeg", args...)
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &out
 
-	log.Println("Running FFmpeg...")
+	log.Println("Running FFmpeg with overlay filter...")
 	err := cmd.Run()
+	log.Println("FFmpeg output:\n", out.String())
+
 	if err != nil {
-		log.Printf("FFmpeg error: %s", out.String())
+		log.Printf("FFmpeg error: %v", err)
 	}
 	return err
 }
@@ -63,7 +56,11 @@ func Watermark(inputFile, outputFile string, timestamp time.Time) error {
 func HandleS3Event(ctx context.Context, s3Event events.S3Event) error {
 	for _, record := range s3Event.Records {
 		bucket := record.S3.Bucket.Name
-		key := record.S3.Object.Key
+		rawKey := record.S3.Object.Key
+		key, err := url.QueryUnescape(rawKey)
+		if err != nil {
+			log.Fatalf("failed to unescape key: %v", err)
+		}
 
 		log.Printf("Triggered for s3://%s/%s", bucket, key)
 
