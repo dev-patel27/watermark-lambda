@@ -28,8 +28,8 @@ func GenerateTimestampImage(timestamp time.Time, outputPath string) error {
 	const fontSize = 30
 	fgColor := color.RGBA{R: 198, G: 23, B: 187, A: 255} // #c617bb
 
-	// Estimate text bounds
-	width := len(text) * fontSize / 2
+	// Estimate text bounds with a more generous width
+	width := len(text) * (fontSize / 1.5)
 	height := int(fontSize * 1.5)
 
 	// Transparent background
@@ -46,7 +46,9 @@ func GenerateTimestampImage(timestamp time.Time, outputPath string) error {
 	c.SetSrc(&image.Uniform{fgColor})
 	c.SetHinting(font.HintingFull)
 
-	pt := freetype.Pt(0, int(c.PointToFixed(fontSize)>>6))
+	// Add left padding to center the text better
+	leftPadding := fontSize
+	pt := freetype.Pt(leftPadding, int(c.PointToFixed(fontSize)>>6))
 	if _, err := c.DrawString(text, pt); err != nil {
 		return err
 	}
