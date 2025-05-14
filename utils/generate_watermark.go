@@ -13,7 +13,14 @@ import (
 )
 
 func GenerateTimestampImage(timestamp time.Time, outputPath string) error {
-	text := timestamp.Format("02/01/2006 15:04:05")
+	// Convert UTC timestamp to IST (UTC+5:30)
+	istLocation, err := time.LoadLocation("Asia/Kolkata")
+	if err != nil {
+		return err
+	}
+	istTime := timestamp.In(istLocation)
+
+	text := istTime.Format("02/01/2006 15:04")
 
 	// Font loading
 	fontBytes, err := os.ReadFile("./fonts/dejavu-sans-bold.ttf")
