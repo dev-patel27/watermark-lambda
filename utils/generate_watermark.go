@@ -20,7 +20,7 @@ func GenerateTimestampImage(timestamp time.Time, outputPath string) error {
 	}
 	istTime := timestamp.In(istLocation)
 
-	text := istTime.Format("02/01/2006 15:04")
+	text := istTime.Format("02/01/2006 15:04:05")
 
 	// Font loading
 	fontBytes, err := os.ReadFile("./fonts/dejavu-sans-bold.ttf")
